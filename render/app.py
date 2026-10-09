@@ -15,6 +15,8 @@ import requests
 STOP = threading.Event()
 MAX_BYTES = 1_000_000_000
 ACTIVE = {'status': 'idle', 'last_poll': 0}
+MAINTENANCE_LOCK = threading.Lock()
+LAST_MAINTENANCE = 0
 
 class Api:
     def __init__(self):
@@ -152,10 +154,21 @@ def consume():
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
+        global LAST_MAINTENANCE
         if self.path != '/health':
             self.send_response(404); self.end_headers(); return
-        payload = json.dumps({'status': 'ok', 'consumer': ACTIVE['status']}).encode()
-        self.send_response(200)
+        maintenance_ok = True
+        with MAINTENANCE_LOCK:
+            if time.monotonic() - LAST_MAINTENANCE > 60:
+                try:
+                    Api().post('/internal/maintenance', {})
+                    LAST_MAINTENANCE = time.monotonic()
+                except Exception:
+                    maintenance_ok = False
+                    print('maintenance_failed', flush=True)
+        payload = json.dumps({'status': 'ok' if maintenance_ok else 'degraded',
+                              'consumer': ACTIVE['status']}).encode()
+        self.send_response(200 if maintenance_ok else 503)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Content-Length', str(len(payload)))
         self.end_headers(); self.wfile.write(payload)

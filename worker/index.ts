@@ -50,8 +50,22 @@ async function access(req: Request, env: Bindings) {
   }
 }
 async function body(req: Request): Promise<Record<string, unknown>> {
-  const text = await req.text();
-  if (text.length > 32768) throw new Error("入力が大きすぎます。");
+  const reader = req.body?.getReader();
+  if (!reader) throw new Error("入力が不正です。");
+  const decoder = new TextDecoder();
+  let text = "",
+    size = 0;
+  while (true) {
+    const chunk = await reader.read();
+    if (chunk.done) break;
+    size += chunk.value.byteLength;
+    if (size > 32768) {
+      await reader.cancel();
+      throw new Error("入力が大きすぎます。");
+    }
+    text += decoder.decode(chunk.value, { stream: true });
+  }
+  text += decoder.decode();
   const data: unknown = JSON.parse(text);
   if (!data || typeof data !== "object" || Array.isArray(data))
     throw new Error("入力が不正です。");
@@ -69,11 +83,16 @@ export async function cleanup(env: Bindings, now = Date.now()) {
     .bind(now)
     .all<{ id: string; object_key: string; upload_id: string | null }>();
   for (const row of rows.results) {
-    if (row.upload_id)
-      await env.FILES.resumeMultipartUpload(
-        row.object_key,
-        row.upload_id,
-      ).abort();
+    if (row.upload_id) {
+      try {
+        await env.FILES.resumeMultipartUpload(
+          row.object_key,
+          row.upload_id,
+        ).abort();
+      } catch {
+        console.error("multipart_abort_failed");
+      }
+    }
     await env.FILES.delete(row.object_key);
     await env.DB.prepare(
       "UPDATE jobs SET object_key=NULL,upload_id=NULL,status=CASE WHEN status='completed' THEN 'expired' ELSE status END,updated_at=? WHERE id=?",
@@ -90,6 +109,10 @@ export async function cleanup(env: Bindings, now = Date.now()) {
 async function internal(req: Request, env: Bindings, path: string) {
   if (!(await secret(req, env))) return json({ error: "Unauthorized" }, 401);
   const now = Date.now();
+  if (path === "/internal/maintenance" && req.method === "POST") {
+    await cleanup(env, now);
+    return json({ ok: true });
+  }
   if (path === "/internal/claim" && req.method === "POST") {
     await env.DB.prepare(
       `UPDATE jobs SET status='failed',error='処理が中断されました。',lease=NULL,updated_at=? WHERE status IN ${active} AND heartbeat<?`,

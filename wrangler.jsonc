@@ -25,7 +25,7 @@
     },
   ],
   "triggers": {
-    "crons": ["*/5 * * * *"],
+    "crons": [],
   },
   "observability": {
     "enabled": true,
@@ -33,8 +33,10 @@
   "vars": {
     "ACCESS_TEAM_DOMAIN": "dawn-union-04c8.cloudflareaccess.com",
     "ACCESS_AUD": "aae3c9b5a60a427452ba31b6ebc54a039319025ab0a15555b99f1937f1dc3daa",
-    "RENDER_URL": "",
+    "RENDER_URL": "https://youtube-download-runner.onrender.com",
     "LOCAL_DEV": "false",
   },
   "account_id": "2a1ab8b6a9b36f7f0c4292dce044e0c4",
+  "workers_dev": true,
+  "preview_urls": false,
 }
