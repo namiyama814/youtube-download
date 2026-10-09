@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: youtube-download-runner
+    runtime: docker
+    plan: free
+    dockerfilePath: ./render/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: WORKER_URL
+        sync: false
+      - key: INTERNAL_SECRET
+        sync: false

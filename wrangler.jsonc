@@ -1,0 +1,40 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "youtube-download",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-09",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "not_found_handling": "single-page-application",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "youtube-download",
+      "database_id": "3df46a5d-aaf1-493a-92a9-1e90fe12d104",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "FILES",
+      "bucket_name": "youtube-download-results",
+    },
+  ],
+  "triggers": {
+    "crons": ["*/5 * * * *"],
+  },
+  "observability": {
+    "enabled": true,
+  },
+  "vars": {
+    "ACCESS_TEAM_DOMAIN": "dawn-union-04c8.cloudflareaccess.com",
+    "ACCESS_AUD": "aae3c9b5a60a427452ba31b6ebc54a039319025ab0a15555b99f1937f1dc3daa",
+    "RENDER_URL": "",
+    "LOCAL_DEV": "false",
+  },
+  "account_id": "2a1ab8b6a9b36f7f0c4292dce044e0c4",
+}
