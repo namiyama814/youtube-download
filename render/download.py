@@ -1,5 +1,6 @@
 """Isolated download process. stdout is a small JSON progress protocol."""
 import json
+import os
 import sys
 from pathlib import Path
 import yt_dlp
@@ -23,6 +24,15 @@ def run(job, directory):
         'outtmpl': str(Path(directory) / 'output.%(ext)s'),
         'max_filesize': MAX_BYTES, 'js_runtimes': {'node': {}},
         'restrictfilenames': True,
+        # Use yt-dlp's documented client + dynamically generated PO Tokens.
+        'extractor_args': {
+            'youtube': {'player_client': ['mweb'], 'fetch_pot': ['always']},
+            'youtubepot-bgutilscript': {'server_home': [os.environ.get('BGUTIL_SERVER_HOME', '/opt/bgutil')]},
+            'youtubepot-bgutilhttp': {'disable': ['true']},
+        },
+        'sleep_interval_requests': 1,
+        'sleep_interval': 5, 'max_sleep_interval': 10,
+
     }
     if job['format'] == 'mp3':
         opts.update(format='bestaudio/best', postprocessors=[{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'}])
