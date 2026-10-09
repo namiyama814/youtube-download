@@ -8,9 +8,9 @@ YouTube の公開動画と Shorts を、Web GUI から MP4／MP3 で取得する
 - GAS から5分ごとに GET する URL: https://youtube-download-runner.onrender.com/health
 - ログイン許可: `namiyama814@gmail.com`
 
-2026-10-09 に、本番の Access による未認証アクセス拒否、内部 API の認証、Render のヘルスチェック、R2 への分割アップロード、期限切れ削除を確認しました。自動テストは Workers 11件、Python 3件が通っています。
+2026-10-09 に、本番の Access による未認証アクセス拒否、内部 API の認証、Render のヘルスチェック、R2 への分割アップロード、期限切れ削除を確認しました。自動テストは Workers 11件、Python 4件が通っています。
 
-公開動画 `jNQXAC9IVRw` の実取得は、YouTube の bot 判定で Render からのアクセスを拒否されました。実動画の取得成功は未確認です。現在の実装はこの拒否を検出して画面に理由を表示します。cookie やプロキシを使った取得は実装していません。
+公開動画 `jNQXAC9IVRw` の実取得は、YouTube の bot 判定で Render からのアクセスを拒否されました。実動画の取得成功は未確認です。PO Token 自動生成と要求間隔の調整を適用して再検証しましたが、Render では MP4／MP3 とも同じ拒否が続いています。同じ動画の情報取得はローカルで成功しました。現在は任意の `YTDLP_PROXY` を取得処理に適用できます。プロキシ経由の本番取得は未確認です。
 
 ## URL を入力してファイルを取得する
 
@@ -72,11 +72,14 @@ npm run worker:dev
 
 フロントエンドだけを編集する場合は `npm run dev` を使えます。ただし API を含む動作確認にはビルド後の `worker:dev` を使ってください。
 
-Render の処理は次の手順で起動します。
+Render の処理は次の手順で起動します。ローカル実行には ffmpeg と Node.js 22 以上も必要です。
 
 ```sh
 python3 -m venv .venv
 .venv/bin/pip install -r render/requirements.txt
+git clone --depth 1 --branch 2.0.2 https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git /tmp/bgutil-provider
+(cd /tmp/bgutil-provider/server && npm ci && npx tsc)
+export BGUTIL_SERVER_HOME=/tmp/bgutil-provider/server
 # WORKER_URL と INTERNAL_SECRET を環境変数に設定
 .venv/bin/python render/app.py
 ```
@@ -152,3 +155,14 @@ yt-dlp は `render/requirements.txt` で固定しています。更新時はバ�
 D1 はジョブ履歴を保持するデータベース、R2 は結果ファイルの保存先、Access は利用者のログイン制限、GAS の時間トリガーは定期実行の設定です。
 
 最終更新: 2026-10-09
+
+## YouTube の bot 判定への対応
+
+yt-dlp の公式 PO Token ガイドに沿って `mweb` クライアントと `bgutil-ytdlp-pot-provider` 2.0.2 を使用します。動画ごとに必要な PO Token を Node.js で自動生成し、取得要求の間隔も空けます。Docker はプロバイダーを組み込むため、追加の公開サービスや cookie は不要です。
+
+依存関係を更新するときは `render/requirements.txt` のプラグイン、Dockerfile のタグとコミット ID を同じリリースに合わせ、公開動画の MP4／MP3 取得を再確認してください。YouTube 側の追加制限やクラウド IP の制限をすべて解消する保証はありません。
+
+- [yt-dlp PO Token Guide](https://github.com/yt-dlp/yt-dlp/wiki/PO-Token-Guide)
+- [bgutil-ytdlp-pot-provider](https://github.com/Brainicism/bgutil-ytdlp-pot-provider)
+
+Render の送信元 IP が拒否される場合は、Render の Environment に `YTDLP_PROXY` を追加し、管理する固定住宅回線プロキシの URL を登録します（例: `http://user:password@host:port`）。秘密情報を含む実際の URL は Git やログに記録しないでください。GUI からプロキシ指定は受け付けず、YouTube と PO Token の通信だけに適用します。Workers と R2 への通信には使いません。プロキシがない場合は、同じ Python 処理を自宅 PC 上で動かし、`WORKER_URL` に本番 Workers の URL を設定できます。その場合は Render の処理サービスを停止して実行元を1台にします。

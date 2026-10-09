@@ -27,6 +27,17 @@ class RunnerTests(unittest.TestCase):
                 FakeDownloader.extension = fmt
                 module.run(self.job(fmt),directory)
                 self.assertTrue((Path(directory)/('output.'+fmt)).exists())
+    def test_proxy_is_applied_only_when_configured(self):
+        for proxy in ('', 'http://user:password@proxy.example:8080'):
+            captured = []
+            def downloader(opts):
+                captured.append(opts)
+                FakeDownloader.extension = 'mp4'
+                return FakeDownloader(opts)
+            with tempfile.TemporaryDirectory() as directory, patch.dict(module.os.environ, {'YTDLP_PROXY':proxy}), patch.object(module.yt_dlp, 'YoutubeDL', side_effect=downloader):
+                module.run(self.job(), directory)
+            self.assertEqual(captured[0].get('proxy'), proxy or None)
+
     def test_live_and_private_rejected(self):
         original = FakeDownloader.info
         try:

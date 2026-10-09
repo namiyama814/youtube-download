@@ -33,6 +33,10 @@ def run(job, directory):
         'sleep_interval': 5, 'max_sleep_interval': 10,
 
     }
+    proxy = os.environ.get('YTDLP_PROXY', '').strip()
+    if proxy:
+        # Applies to YouTube and PO Token traffic; Worker/R2 traffic stays direct.
+        opts['proxy'] = proxy
     if job['format'] == 'mp3':
         opts.update(format='bestaudio/best', postprocessors=[{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'}])
     else:
