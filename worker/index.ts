@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { options } from "./validation";
 type Bindings = Env & { INTERNAL_SECRET: string };
@@ -25,9 +26,7 @@ async function secret(req: Request, env: Bindings) {
       await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)),
     );
   const [a, b] = await Promise.all([hash(supplied), hash(env.INTERNAL_SECRET)]);
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
-  return diff === 0;
+  return timingSafeEqual(a, b);
 }
 async function access(req: Request, env: Bindings) {
   const url = new URL(req.url);
@@ -242,9 +241,21 @@ async function internal(req: Request, env: Bindings, path: string) {
       : 0;
   const title =
     typeof data.title === "string" ? data.title.slice(0, 200) : null;
+  const errors: Record<string, string> = {
+    bot_detected:
+      "YouTube が Render からのアクセスを制限しています。時間を置いて再試行してください。",
+    authentication_required: "ログインが必要な動画は取得できません。",
+    unavailable: "この動画は公開されていないか、利用できません。",
+    network_error: "動画サイトとの通信に失敗しました。再試行してください。",
+    upload_failed: "ファイルの保存に失敗しました。再試行してください。",
+    unsupported_video: "ライブ配信やプレイリストは取得できません。",
+    size_limit:
+      "ファイルがサイズ上限を超えています。画質を下げて再試行してください。",
+  };
   const error =
     status === "failed"
-      ? "ダウンロードに失敗しました。動画の公開状態や制限を確認して再試行してください。"
+      ? (errors[String(data.error_code)] ??
+        "ダウンロードに失敗しました。動画の公開状態や制限を確認して再試行してください。")
       : null;
   const result = await env.DB.prepare(
     `UPDATE jobs SET status=?,progress=?,title=COALESCE(?,title),error=?,heartbeat=?,updated_at=?,object_key=COALESCE(?,object_key),filename=COALESCE(?,filename),size=COALESCE(?,size),expires_at=COALESCE(?,expires_at) WHERE id=? AND lease=? AND cancel_requested=0 AND status IN ${active}`,

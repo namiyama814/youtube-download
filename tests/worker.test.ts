@@ -47,6 +47,7 @@ beforeAll(async () => {
     write: false,
     format: "esm",
     platform: "browser",
+    external: ["node:crypto"],
     target: "es2022",
   }).outputFiles[0].text;
   mf = new Miniflare(

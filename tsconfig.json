@@ -6,8 +6,19 @@
     "jsx": "react-jsx",
     "strict": true,
     "skipLibCheck": true,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["vite/client"]
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": [
+      "vite/client",
+      "node"
+    ]
   },
-  "include": ["src", "worker", "worker-configuration.d.ts"]
+  "include": [
+    "src",
+    "worker",
+    "worker-configuration.d.ts"
+  ]
 }

@@ -44,6 +44,7 @@ def execute(api, job):
     state = {'status': 'running', 'progress': 0}
     lock = threading.Lock()
     start = time.monotonic()
+    failure_code = 'download_failed'
     def update(**data):
         with lock:
             state.update(data)
@@ -77,7 +78,9 @@ def execute(api, job):
                 for line in process.stdout:
                     try:
                         data = json.loads(line)
-                        if 'error' not in data:
+                        if 'error' in data:
+                            update(error_code=data['error'])
+                        else:
                             update(**data)
                     except (ValueError, TypeError):
                         pass
@@ -98,6 +101,7 @@ def execute(api, job):
             output = Path(directory) / f"output.{job['format']}"
             if not output.is_file() or not 0 < output.stat().st_size <= MAX_BYTES:
                 raise RuntimeError('output_limit')
+            failure_code = 'upload_failed'
             update(status='uploading', progress=99)
             report()  # Record the object key before R2 receives data.
             upload_path = '/internal/jobs/' + job['id'] + '/upload/'
@@ -126,12 +130,12 @@ def execute(api, job):
         finished.set()
         heart.join(timeout=25)
         try:
-            report(status='failed', progress=0)
+            report(status='failed', progress=0, error_code=state.get('error_code', failure_code))
         except Exception:
             pass
         # Cleanup owns deletion: a completed report may have been committed
         # even when its HTTP response was lost. Never delete a committed result.
-        print('job_failed', flush=True)
+        print('job_failed:' + state.get('error_code', failure_code), flush=True)
     finally:
         finished.set()
         heart.join(timeout=25)

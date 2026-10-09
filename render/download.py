@@ -54,7 +54,15 @@ def run(job, directory):
 if __name__ == '__main__':
     try:
         run(json.loads(sys.argv[1]), sys.argv[2])
-    except Exception:
-        # Upstream errors can contain sensitive URLs; expose only a stable error.
-        emit(error='download_failed')
+    except Exception as error:
+        # Inspect locally, but never emit upstream URLs, cookies or messages.
+        message = str(error).lower()
+        code = 'download_failed'
+        if 'not a bot' in message: code = 'bot_detected'
+        elif 'sign in' in message or 'authentication_required' in message: code = 'authentication_required'
+        elif 'unavailable' in message or 'removed' in message: code = 'unavailable'
+        elif 'timed out' in message or 'network' in message: code = 'network_error'
+        elif 'unsupported_video' in message: code = 'unsupported_video'
+        elif 'size_limit' in message or 'oversized' in message: code = 'size_limit'
+        emit(error=code)
         sys.exit(1)
