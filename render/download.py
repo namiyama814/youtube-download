@@ -28,7 +28,6 @@ def run(job, directory):
         'extractor_args': {
             'youtube': {'player_client': ['mweb'], 'fetch_pot': ['always']},
             'youtubepot-bgutilscript': {'server_home': [os.environ.get('BGUTIL_SERVER_HOME', '/opt/bgutil')]},
-            'youtubepot-bgutilhttp': {'disable': ['true']},
         },
         'sleep_interval_requests': 1,
         'sleep_interval': 5, 'max_sleep_interval': 10,

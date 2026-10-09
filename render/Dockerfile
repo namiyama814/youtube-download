@@ -1,5 +1,5 @@
 FROM node:26-bookworm-slim AS provider
-RUN apt-get update && apt-get install -y --no-install-recommends git python3 make g++ pkg-config libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates git python3 make g++ pkg-config libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev && rm -rf /var/lib/apt/lists/*
 # Match the pinned Python plugin and verify the upstream commit.
 RUN git clone --depth 1 --branch 2.0.2 https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git /opt/provider && test "$(git -C /opt/provider rev-parse HEAD)" = "26475e9d3665b972c4aeb83b4dbaafcf64b88438"
 WORKDIR /opt/provider/server
