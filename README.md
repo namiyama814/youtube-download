@@ -2,6 +2,16 @@
 
 YouTube の公開動画と Shorts を、Web GUI から MP4／MP3 で取得する個人・限定メンバー向けツールです。Cloudflare Workers が画面と API を配信し、Render が yt-dlp と ffmpeg を実行します。結果は非公開 R2 に保存し、完了から1時間で取得できなくなります。
 
+## 公開先と動作確認
+
+- Web GUI: https://youtube-download.namiyama814.workers.dev/
+- GAS から5分ごとに GET する URL: https://youtube-download-runner.onrender.com/health
+- ログイン許可: `namiyama814@gmail.com`
+
+2026-10-09 に、本番の Access による未認証アクセス拒否、内部 API の認証、Render のヘルスチェック、R2 への分割アップロード、期限切れ削除を確認しました。自動テストは Workers 11件、Python 3件が通っています。
+
+公開動画 `jNQXAC9IVRw` の実取得は、YouTube の bot 判定で Render からのアクセスを拒否されました。実動画の取得成功は未確認です。現在の実装はこの拒否を検出して画面に理由を表示します。cookie やプロキシを使った取得は実装していません。
+
 ## URL を入力してファイルを取得する
 
 1. Web GUI を開き、Cloudflare Access に許可されたメールアドレスでログインします。
@@ -123,7 +133,7 @@ npm test
 npx wrangler deploy --dry-run
 ```
 
-Workers のテストは Miniflare の実行環境で D1 と R2 を使い、認証拒否、URL 検証、待機上限、排他取得、キャンセル、中断回復、分割アップロード、期限切れ、削除を確認します。Python テストは yt-dlp の呼び出しを置き換え、形式と対象動画の制限を確認します。YouTube の実通信を含むテストは本番確認として別途行います。
+Workers のテストは Miniflare の実行環境で D1 と R2 を使い、認証拒否、URL 検証、待機上限、排他取得、キャンセル、中断回復、分割アップロード、期限切れ、削除を確認します。Python テストは yt-dlp の呼び出しを置き換え、形式と対象動画の制限、キャンセル、アップロード失敗、一時ファイルの削除を確認します。YouTube の実通信を含むテストは本番確認として別途行います。
 
 yt-dlp は `render/requirements.txt` で固定しています。更新時はバージョンを変更し、テスト後に MP4／MP3 の実取得を確認してから Render に反映します。npm のバージョンは `package-lock.json` で固定します。
 
